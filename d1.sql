@@ -7,7 +7,9 @@ CREATE TABLE story (
   author TEXT NOT NULL,
   description TEXT NOT NULL,
   music_style TEXT NOT NULL,
-  status INTEGER NOT NULL
+  status INTEGER NOT NULL,
+  image_path TEXT NOT NULL,
+  tag TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_story_deleted_at ON story (deleted_at);
 

@@ -6,6 +6,7 @@ import (
 	"fairytale-creator/database"
 	"fairytale-creator/handler"
 	"fairytale-creator/logger"
+	"fairytale-creator/scheduler"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +34,9 @@ func main() {
 		Addr:    "127.0.0.1:9700",
 		Handler: r,
 	}
+	// 启动定时任务
+	scheduler.StartScheduler()
+
 	// 开始监听
 	go func() {
 		logger.Log("server started on:", srv.Addr)
@@ -48,7 +52,10 @@ func main() {
 	logger.Log("[main],app stopping,receive:", sig.String())
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	// stop main apps
+
+	// 停止定时任务
+	scheduler.StopScheduler()
+
 	// 关闭 HTTP 服务器
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Error("服务器关闭错误:", err.Error())

@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+.github
+
+# 编译产物
+*.exe
+*.dll
+*.so
+*.dylib
+fairytale-creator
+
+# 依赖
+vendor/
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 测试文件
+*_test.go
+
+# 声音和故事文件（运行时生成）
+voices/*.mp3
+stories/*.json
+
+# 环境变量文件（敏感信息）
+.env
+.env.local
+
+# 文档
+doc/
+*.md
+README*
+

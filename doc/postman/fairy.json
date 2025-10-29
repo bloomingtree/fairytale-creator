@@ -1,0 +1,115 @@
+{
+  "info": {
+    "_postman_id": "c6b4a5f2-0b88-4f4c-9a0a-3b28e5e0c1a1",
+    "name": "fairytale-creator API",
+    "description": "接口集合：用户登录、故事生成/列表、语音生成、静态资源访问",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "登录 /v1/user/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/user/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "user", "login"]
+            },
+            "description": "账号登录，成功会在会话写入 login=true。data 为 true/false。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Story",
+      "item": [
+        {
+          "name": "生成故事 /v1/story/add",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/story/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "story", "add"]
+            },
+            "description": "自动生成童话故事（章节含图片与语音），并写入 D1、上传 R2。"
+          },
+          "response": []
+        },
+        {
+          "name": "故事列表(当前返回APIKey) /v1/story/list",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/story/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "story", "list"]
+            },
+            "description": "当前实现为占位：返回 flag.DeepSeekAPIKey。"
+          },
+          "response": []
+        },
+        {
+          "name": "生成语音 /v1/story/voice/generate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"从前有座森林，住着一只勇敢的小鹿……\",\n  \"filename\": \"demo-voice.mp3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/story/voice/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "story", "voice", "generate"]
+            },
+            "description": "按文本合成语音并保存到 {{videoRoot}}/demo-voice.mp3。返回 data=true 表示成功。"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Resource",
+      "item": [
+        {
+          "name": "静态资源访问 /v1/resource/{file}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v1/resource/{{resourceFile}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "resource", "{{resourceFile}}"]
+            },
+            "description": "静态资源根目录为 flag.VideoRoot。示例：voices 下的 mp3。"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "username", "value": "admin" },
+    { "key": "password", "value": "admin" },
+    { "key": "videoRoot", "value": "/path/to/VideoRoot" },
+    { "key": "resourceFile", "value": "1.mp3" }
+  ]
+}

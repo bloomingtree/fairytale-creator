@@ -2,15 +2,8 @@ package database
 
 import (
 	"errors"
-	"fairytale-creator/flag"
-	"fairytale-creator/logger"
-	"fmt"
-	"os"
-	"time"
 
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	logger2 "gorm.io/gorm/logger"
 )
 
 var (
@@ -21,43 +14,7 @@ var (
 )
 
 func Init() error {
-	if gormDB != nil {
-		return errors.New("connection already exists")
-	}
-	host := flag.MysqlHost
-	port := flag.MysqlPort
-	database := flag.MysqlDatabase
-	username := flag.MysqlUsername
-	password := flag.MysqlPassword
-	charset := "utf8"
-	db_host := os.Getenv("DB_HOST")
-	if db_host != "" {
-		host = db_host
-	}
-	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=true",
-		username,
-		password,
-		host,
-		port,
-		database,
-		charset,
-	)
-	var err error
-	for i := 0; i < 40; i++ {
-		gormDB, err = gorm.Open(mysql.Open(address), &gorm.Config{
-			Logger: logger2.Default.LogMode(logger2.Info),
-		})
-		if err != nil {
-			time.Sleep(1 * time.Second)
-		} else {
-			break
-		}
-	}
-	if err != nil {
-		logger.Error("连接数据库失败：", err.Error())
-		return err
-	}
-	gormDB.AutoMigrate(&Story{}, &Chapter{})
+	// 取消 MySQL 连接：保持为空实现，避免建立任何数据库连接
 	return nil
 }
 

@@ -1,0 +1,107 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.DOCKER_REGISTRY_URL }}
+          username: ${{ vars.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKER_REGISTRY_URL }}/${{ vars.DOCKER_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ vars.DOCKER_REGISTRY_URL }}/${{ vars.DOCKER_IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ vars.DOCKER_REGISTRY_URL }}/${{ vars.DOCKER_IMAGE_NAME }}:buildcache,mode=max
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ vars.SERVER_USERNAME }}
+          port: ${{ vars.SERVER_PORT }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            
+            # 登录到Docker仓库
+            echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" | docker login ${{ vars.DOCKER_REGISTRY_URL }} -u "${{ vars.DOCKER_REGISTRY_USERNAME }}" --password-stdin
+            
+            # 拉取最新镜像
+            echo "拉取最新镜像..."
+            docker pull ${{ vars.DOCKER_REGISTRY_URL }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
+            
+            # 定义容器名称和volume路径
+            CONTAINER_NAME="fairytale-creator"
+            VOLUME_BASE="/data/fairytale-creator"
+            
+            # 创建必要的目录（如果不存在）
+            mkdir -p $VOLUME_BASE/voices
+            mkdir -p $VOLUME_BASE/stories
+            mkdir -p $VOLUME_BASE/images
+            
+            # 检查并停止旧容器
+            if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+              echo "停止并删除旧容器..."
+              docker stop $CONTAINER_NAME || true
+              docker rm $CONTAINER_NAME || true
+            fi
+            
+            # 运行新容器
+            echo "启动新容器..."
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p 9700:9700 \
+              -v $VOLUME_BASE/voices:/app/voices \
+              -v $VOLUME_BASE/stories:/app/stories \
+              -v $VOLUME_BASE/images:/app/images \
+              -v $VOLUME_BASE/.env:/app/.env:ro \
+              ${{ vars.DOCKER_REGISTRY_URL }}/${{ vars.DOCKER_IMAGE_NAME }}:latest || {
+                echo "容器启动失败！"
+                exit 1
+              }
+            
+            # 等待容器启动并检查状态
+            sleep 5
+            if docker ps | grep -q $CONTAINER_NAME; then
+              echo "✅ 部署成功！容器正在运行"
+              docker logs --tail 20 $CONTAINER_NAME
+            else
+              echo "❌ 容器启动失败，查看日志："
+              docker logs $CONTAINER_NAME
+              exit 1
+            fi
+            
+            # 清理未使用的镜像（可选）
+            docker image prune -f || true
+

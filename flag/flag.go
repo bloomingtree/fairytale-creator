@@ -1,7 +1,11 @@
 package flag
 
 import (
-	"flag"
+	"bufio"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 )
 
 var (
@@ -30,29 +34,73 @@ var (
 	R2AccessKeySecret     string
 )
 
+var once sync.Once
+
 func init() {
-	flag.StringVar(&Username, "username", "admin", "用户名")
-	flag.StringVar(&Password, "password", "20240316", "密码")
-	flag.StringVar(&VideoRoot, "video-root", "", "视频存储根路径")
-	flag.StringVar(&DeepSeekAPIKey, "deepseek-api-key", "", "DeepSeek API Key")
-	flag.StringVar(&DeepSeekUrl, "deepseek-url", "https://api.deepseek.com", "DeepSeek URL")
-	flag.StringVar(&JimengAccessKeyID, "jimeng-access-key-id", "", "Jimeng Access Key ID")
-	flag.StringVar(&JimengSecretAccessKey, "jimeng-secret-access-key", "", "Jimeng Secret Access Key")
-	flag.StringVar(&StoryRoot, "story-root", "stories", "故事存储根路径")
-	flag.StringVar(&ImageRoot, "image-root", "images", "图片存储根路径")
-	flag.StringVar(&CosyVoiceAPIKey, "cosy-voice-api-key", "", "CosyVoice API Key")
-	flag.StringVar(&VoiceRoot, "voice-root", "voices", "语音存储根路径")
-	flag.StringVar(&DoubaoSeedreamAPIKey, "doubao-seedream-api-key", "", "Doubao Seedream API Key")
-	flag.StringVar(&MysqlUsername, "mysql-username", "admin", "Mysql用户名")
-	flag.StringVar(&MysqlPassword, "mysql-password", "20240316", "Mysql密码")
-	flag.StringVar(&MysqlHost, "mysql-host", "localhost", "Mysq	l主机")
-	flag.StringVar(&MysqlPort, "mysql-port", "3306", "Mysql端口")
-	flag.StringVar(&MysqlDatabase, "mysql-database", "fairytale", "Mysql数据库")
-	flag.StringVar(&CfAccountID, "cf-account-id", "", "Cloudflare Account ID")
-	flag.StringVar(&D1DatabaseID, "d1-database-id", "", "D1 Database ID")
-	flag.StringVar(&D1Email, "d1-email", "", "D1 Email")
-	flag.StringVar(&D1APIKey, "d1-api-key", "", "D1 API Key")
-	flag.StringVar(&R2AccessKeyID, "r2-access-key-id", "", "R2 Access Key ID")
-	flag.StringVar(&R2AccessKeySecret, "r2-access-key-secret", "", "R2 Access Key Secret")
-	flag.Parse()
+	once.Do(func() {
+		_ = loadEnvFile(".env")
+		Username = getEnvOrDefault("USERNAME", "admin")
+		Password = getEnvOrDefault("PASSWORD", "20240316")
+		VideoRoot = getEnvOrDefault("VIDEO_ROOT", "")
+		DeepSeekAPIKey = getEnvOrDefault("DEEPSEEK_API_KEY", "")
+		DeepSeekUrl = getEnvOrDefault("DEEPSEEK_URL", "https://api.deepseek.com")
+		JimengAccessKeyID = getEnvOrDefault("JIMENG_ACCESS_KEY_ID", "")
+		JimengSecretAccessKey = getEnvOrDefault("JIMENG_SECRET_ACCESS_KEY", "")
+		StoryRoot = getEnvOrDefault("STORY_ROOT", "stories")
+		ImageRoot = getEnvOrDefault("IMAGE_ROOT", "images")
+		CosyVoiceAPIKey = getEnvOrDefault("COSY_VOICE_API_KEY", "")
+		VoiceRoot = getEnvOrDefault("VOICE_ROOT", "voices")
+		DoubaoSeedreamAPIKey = getEnvOrDefault("DOUBAO_SEEDREAM_API_KEY", "")
+		MysqlUsername = getEnvOrDefault("MYSQL_USERNAME", "admin")
+		MysqlPassword = getEnvOrDefault("MYSQL_PASSWORD", "20240316")
+		MysqlHost = getEnvOrDefault("MYSQL_HOST", "localhost")
+		MysqlPort = getEnvOrDefault("MYSQL_PORT", "3306")
+		MysqlDatabase = getEnvOrDefault("MYSQL_DATABASE", "fairytale")
+		CfAccountID = getEnvOrDefault("CF_ACCOUNT_ID", "")
+		D1DatabaseID = getEnvOrDefault("D1_DATABASE_ID", "")
+		D1Email = getEnvOrDefault("D1_EMAIL", "")
+		D1APIKey = getEnvOrDefault("D1_API_KEY", "")
+		R2AccessKeyID = getEnvOrDefault("R2_ACCESS_KEY_ID", "")
+		R2AccessKeySecret = getEnvOrDefault("R2_ACCESS_KEY_SECRET", "")
+	})
+}
+
+func getEnvOrDefault(key, def string) string {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def
+	}
+	return v
+}
+
+func loadEnvFile(filename string) error {
+	abs, err := filepath.Abs(filename)
+	if err == nil {
+		filename = abs
+	}
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// 使用 SplitN 只分割第一个 `=`，支持值中包含等号
+		// 例如: KEY=value=with=equals=sign
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			// 去掉首尾的引号（支持 "value" 或 'value'）
+			val = strings.Trim(val, " \t\"'")
+			if os.Getenv(key) == "" { // do not override existing env
+				_ = os.Setenv(key, val)
+			}
+		}
+	}
+	return nil
 }

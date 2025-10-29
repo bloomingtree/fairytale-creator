@@ -140,7 +140,7 @@ func (c *DoubaoSeedreamClient) GenerateImage(prompt string, imageURL *string) (*
 	}
 
 	// 检查是否有生成的图像
-	if len(response.Data) == 0 {
+	if response.Data == nil || len(response.Data) == 0 {
 		logger.Error("no images generated")
 		return nil, err
 	}

@@ -48,8 +48,15 @@ func (s *StoryService) GenerateStory() *response.Story {
 		return nil
 	}
 	logger.Log("deepseek end", story.Description)
-	// return story
+	// 生成封面图：根据 story.ImagePrompt 生成，并写入 story.ImagePath
 	doubaoSeedreamClient := modelapi.NewDoubaoSeedreamClient(flag.DoubaoSeedreamAPIKey)
+	coverUrl, err := doubaoSeedreamClient.GenerateImageFromPromptAndGetURL(story.ImagePrompt)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+	story.ImagePath = coverUrl
+	// 固定封面图为“第一张”参考，不再动态更新
 	firstImageUrl := ""
 	for i, chapter := range story.Chapters {
 		imgUrl := ""
@@ -98,7 +105,24 @@ func (s *StoryService) AddStory(story *response.Story) error {
 		Description: story.Description,
 		MusicStyle:  story.MusicStyle,
 		Status:      0,
+		ImagePath:   "",
+		Tag:         "",
 	}
+	// 上传封面图到 R2，并回填 imagePath
+	if story.ImagePath != "" {
+		imageName := uuid.NewString() + currentDate + ".png"
+		uploader, err := modelapi.NewR2Uploader(flag.CfAccountID, flag.R2AccessKeyID, flag.R2AccessKeySecret, "fairytale")
+		if err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+		if err := uploader.UploadFromURL(story.ImagePath, imageName); err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+		storyModel.ImagePath = imageName
+	}
+
 	response, err := storyDao.AddStoryToD1(&storyModel)
 	if err != nil {
 		logger.Error(err.Error())

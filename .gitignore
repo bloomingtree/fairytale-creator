@@ -1,3 +1,4 @@
 stories/
 voices/
 .vscode/
+.env

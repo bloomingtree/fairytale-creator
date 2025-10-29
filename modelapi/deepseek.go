@@ -62,6 +62,7 @@ func (c *DeepSeekClient) GenerateFairyTale(theme string, date string, style []st
 	"author": "作者(可以虚构)",
 	"description": "故事总结",
 	"music_style": "背景音乐风格描述",
+	"image_prompt": "整个故事书的封面图片描述",
 	"chapters": [
 		{
 			"title": "章节标题",
@@ -86,7 +87,7 @@ func (c *DeepSeekClient) GenerateFairyTale(theme string, date string, style []st
 	requestBody, _ := json.Marshal(map[string]interface{}{
 		"model":       "deepseek-chat",
 		"messages":    []map[string]string{{"role": "system", "content": systemPrompt}, {"role": "user", "content": prompt}},
-		"temperature": 0.8,
+		"temperature": 1.5,
 		"max_tokens":  8000,
 	})
 
@@ -102,11 +103,42 @@ func (c *DeepSeekClient) GenerateFairyTale(theme string, date string, style []st
 
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	// 解析DeepSeek返回的JSON，提取故事内容
-	var result map[string]interface{}
-	json.Unmarshal(body, &result)
+	// 非 200 直接返回错误，便于定位 API Key/URL 配置问题
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("deepseek http %d: %s", resp.StatusCode, string(body))
+	}
 
-	content := result["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
+	// 解析DeepSeek返回的JSON，提取故事内容（带健壮性校验，避免panic）
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		logger.Error("deepseek unmarshal error:", err.Error())
+		return nil, err
+	}
+
+	choicesRaw, ok := result["choices"]
+	if !ok {
+		return nil, fmt.Errorf("deepseek response missing 'choices': %s", string(body))
+	}
+	choices, ok := choicesRaw.([]interface{})
+	if !ok || len(choices) == 0 {
+		return nil, fmt.Errorf("deepseek response invalid 'choices': %T %s", choicesRaw, string(body))
+	}
+	first, ok := choices[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("deepseek response invalid first choice: %T", choices[0])
+	}
+	message, ok := first["message"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("deepseek response missing 'message' in choice: %v", first)
+	}
+	contentRaw, ok := message["content"]
+	if !ok {
+		return nil, fmt.Errorf("deepseek response missing 'content' in message: %v", message)
+	}
+	content, ok := contentRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("deepseek response 'content' is not string: %T", contentRaw)
+	}
 
 	var story response.Story
 	// 清洗掉content中的```json和```
