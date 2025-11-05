@@ -62,7 +62,7 @@ jobs:
             
             # 定义容器名称和volume路径
             CONTAINER_NAME="fairytale-creator"
-            VOLUME_BASE="/data/fairytale-creator"
+            VOLUME_BASE="/apps/fairytale/volumes"
             
             # 创建必要的目录（如果不存在）
             mkdir -p $VOLUME_BASE/voices
