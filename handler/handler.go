@@ -23,5 +23,5 @@ func Init(engine *gin.Engine) {
 		story.GET("/list", listStory)
 		story.POST("/voice/generate", generateVoice)
 	}
-	engine.Static("/v1/resource", flag.VideoRoot)
+	engine.Static("/v1/resource", flag.VoiceRoot)
 }

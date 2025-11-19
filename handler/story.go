@@ -74,7 +74,7 @@ func generateVoice(c *gin.Context) {
 		return
 	}
 	storyService := service.NewStoryService()
-	success := storyService.GenerateVoice(form.Text, path.Join(flag.VideoRoot, form.Filename))
+	success := storyService.GenerateVoice(form.Text, path.Join(flag.VoiceRoot, form.Filename))
 	if !success {
 		res[Message] = "生成语音失败"
 		return
